@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block c %}<h2>👛 Salário × Caixa da empresa</h2>{% include "filtro.html" %}
+<div class="card" style="border-color:var(--ouro)"><small>Lucro a dividir</small><div class="num ouro">{{r.lucro|brl}}</div></div>
+<div class="grid"><div class="card"><small>💖 Meu salário ({{'%g'%r.pct}}%)</small><div class="num">{{r.sal|brl}}</div></div>
+<div class="card"><small>🏢 Reserva da empresa ({{'%g'%(100-r.pct)}}%)</small><div class="num">{{r.reserva|brl}}</div></div></div>
+<div class="card"><small>Capital para manter o negócio (materiais + compras + reserva)</small><div class="num">{{(r.cus+r.desp+r.reserva)|brl}}</div></div>
+<form class="card" method="post"><input type="hidden" name="acao" value="pct"><label>% do lucro que vira salário</label>
+<input name="pct" type="number" min="0" max="100" step="1" value="{{'%g'%r.pct}}"><br><button class="btn">Salvar %</button></form>
+<h2>🛍 Compras de materiais</h2>
+<form class="card" method="post"><input type="hidden" name="acao" value="despesa">
+<label>Data</label><input type="date" name="data" value="{{hoje}}" required><label>Descrição</label><input name="descricao" required>
+<label>Valor (R$)</label><input name="valor" type="number" step="0.01" required><br><button class="btn">Adicionar gasto</button></form>
+{% for d in desp %}<div class="card row sp"><div><b>{{d.descricao}}</b><br><small>{{d.data[8:]}}/{{d.data[5:7]}}</small></div><div class="row"><b>{{d.valor|brl}}</b>
+<form method="post" onsubmit="return confirm('Apagar?')"><input type="hidden" name="acao" value="apagar"><input type="hidden" name="id" value="{{d.id}}"><button class="btn mini cinza">🗑</button></form></div></div>{% endfor %}{% endblock %}

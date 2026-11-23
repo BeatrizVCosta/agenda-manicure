@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block c %}<h2>📅 Novo agendamento</h2>
+<form class="card" method="post">
+<label>Data</label><input type="date" name="data" value="{{hoje}}" required>
+<label>Horário</label><input type="time" name="hora" required>
+<label>Nome da cliente</label><input name="nome" id="nome" list="cl" required autocomplete="off" value="{{pre.nome if pre}}">
+<datalist id="cl">{% for c in clientes %}<option value="{{c.nome}}">{% endfor %}</datalist>
+<label>Contato (WhatsApp)</label><input name="contato" id="contato" type="tel" required value="{{pre.contato if pre}}">
+<label>Procedimento</label><select name="servico_id" required>{% for s in servicos %}<option value="{{s.id}}" {{'selected' if s.id==pre_serv}}>{{s.nome}} — {{s.preco|brl}} ({{s.horas}}h)</option>{% endfor %}</select>
+<label>Observações</label><textarea name="obs" rows="2"></textarea><br>
+<button class="btn grande">Salvar agendamento</button>
+<small>Clientes novas ficam salvas automaticamente; nas próximas, digite o nome e o contato é preenchido.</small></form>
+<script>const C={{cj|safe}};document.getElementById('nome').addEventListener('input',e=>{const c=C.find(x=>x.nome===e.target.value);if(c)document.getElementById('contato').value=c.contato})</script>
+{% endblock %}

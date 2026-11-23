@@ -1,0 +1,9 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Agenda Nails</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
+<input type="checkbox" id="menu">
+<header><label for="menu" class="burger">☰</label><h1>💅 Agenda Nails</h1></header>
+<nav><a href="/">🏠 Início</a><a href="/servicos">💎 Serviços</a><a href="/agendar">📅 Novo agendamento</a>
+<a href="/financas">📊 Finanças</a><a href="/caixa">👛 Salário × Caixa</a></nav>
+<label for="menu" class="veu"></label>
+<main>{% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}{% block c %}{% endblock %}</main></body></html>

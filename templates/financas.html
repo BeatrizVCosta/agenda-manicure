@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block c %}<h2>📊 Finanças</h2>{% include "filtro.html" %}
+<div class="grid">
+<div class="card"><small>Recebido ({{r.n}} atend.)</small><div class="num">{{r.rec|brl}}</div></div>
+<div class="card"><small>Gasto total</small><div class="num">{{(r.cus+r.desp)|brl}}</div></div>
+<div class="card"><small>Materiais dos serviços</small><div class="num">{{r.cus|brl}}</div></div>
+<div class="card"><small>Compras avulsas</small><div class="num">{{r.desp|brl}}</div></div></div>
+<div class="card" style="border-color:var(--ouro)"><small>Lucro do período</small><div class="num ouro">{{r.lucro|brl}}</div></div>
+<h2>⭐ Serviços mais feitos</h2>
+{% for s in r.rank if s.qtd %}<div class="card"><div class="row sp"><b>{{s.nome}}</b><span>{{s.qtd}}x · {{s.total|brl}}</span></div><div class="barra"><i style="width:{{s.qtd/r.max*100}}%"></i></div></div>{% else %}<div class="zero">Nenhum atendimento concluído no período.</div>{% endfor %}
+<h2>🕊 Sem nenhum pedido</h2>
+<div class="card">{% for s in r.rank if not s.qtd %}<span class="tag">{{s.nome}}</span> {% else %}Todos os serviços foram pedidos!{% endfor %}</div>
+<small>Só contam como receita os atendimentos marcados como “Concluído” na tela inicial.</small>{% endblock %}

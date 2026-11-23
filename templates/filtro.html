@@ -1,0 +1,6 @@
+<form class="card" method="get">
+<label>Período</label>
+<select name="p" onchange="this.form.querySelector('.cu').style.display=this.value=='custom'?'grid':'none'">
+{% for k,n in [('semana','Esta semana'),('mes','Este mês'),('ano','Este ano'),('custom','Escolher datas')] %}<option value="{{k}}" {{'selected' if p==k}}>{{n}}</option>{% endfor %}</select>
+<div class="grid cu" style="display:{{'grid' if p=='custom' else 'none'}}"><div><label>De</label><input type="date" name="ini" value="{{ini}}"></div><div><label>Até</label><input type="date" name="fim" value="{{fim}}"></div></div>
+<br><button class="btn">Filtrar</button></form>
