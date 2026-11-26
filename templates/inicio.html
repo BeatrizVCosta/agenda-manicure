@@ -1,12 +1,25 @@
-{% extends "base.html" %}{% block c %}
-<a class="btn grande" href="/agendar">＋ Novo agendamento</a>
-<div class="row sp"><a class="btn mini cinza" href="/?s={{off-1}}">◀</a><b>{{ini.strftime('%d/%m')}} – {{f.strftime('%d/%m')}}</b><a class="btn mini cinza" href="/?s={{off+1}}">▶</a></div>
-{% for d,lista in dias.items() %}<div class="dia {{'hoje' if d==hoje}}">{{ d|dia_br }}{{' • hoje' if d==hoje}}</div>
-{% if not lista %}<div class="zero">Sem atendimentos</div>{% endif %}
+{% extends "base.html" %}{% from "_sad.html" import fase, decisao %}{% block c %}
+<a class="btn grande" href="/agendar">Novo agendamento</a>
+<div class="row sp"><a class="btn mini cinza" href="/?s={{off-1}}" aria-label="Semana anterior"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><b>{{ini.strftime('%d/%m')}} – {{f.strftime('%d/%m')}}</b><a class="btn mini cinza" href="/?s={{off+1}}" aria-label="Próxima semana"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+
+<section class="card painel" aria-labelledby="sad-resumo">
+  <div class="row sp"><b id="sad-resumo">Apoio à decisão da semana</b>{{ fase() }}</div>
+  <div class="lacunas">
+    <div><small>Dia de menor movimento</small><div class="vazio">A definir</div></div>
+    <div><small>Gravação de conteúdo</small><div class="vazio">A definir</div></div>
+    <div><small>Conteúdo sazonal</small><div class="vazio">Nenhum</div></div>
+  </div>
+  <small>Esta agenda é só da rotina de trabalho. O domingo é dia de descanso e a gravação de conteúdo nunca cai nele.</small>
+  {{ decisao() }}
+  <a href="/sad">Abrir apoio à decisão</a>
+</section>
+{% for d,lista in dias.items() %}{% set dom = d|eh_domingo %}<div class="dia {{'hoje' if d==hoje}} {{'domingo' if dom}}">{{ d|dia_br }}{{' • hoje' if d==hoje}}{% if dom %} <span class="tag descanso">Descanso</span>{% endif %}</div>
+{% if dom and lista %}<small class="aviso-dom">Há atendimento em dia de descanso. A decisão de manter é sua.</small>{% endif %}
+{% if not lista %}<div class="zero">{{'Dia de descanso' if dom else 'Sem atendimentos'}}</div>{% endif %}
 {% for a in lista %}<div class="card"><div class="row sp"><b>{{a.hora}} – {{a|fim}}</b><span class="tag {{a.status}}">{{a.status}}</span></div>
 <div>{{a.cliente}} · <a href="https://wa.me/55{{a.contato|replace(' ','')|replace('-','')|replace('(','')|replace(')','')}}">{{a.contato}}</a></div>
 <div>{{a.servico}} · {{a.preco|brl}}</div>
 <div class="row" style="margin-top:8px">
-{% for st,lb in [('concluido','✔ Concluir'),('cancelado','✖ Cancelar'),('agendado','↺ Reabrir')] if st!=a.status %}
+{% for st,lb in [('concluido','Concluir'),('cancelado','Cancelar'),('agendado','Reabrir')] if st!=a.status %}
 <form method="post" action="/status/{{a.id}}/{{st}}"><button class="btn mini {{'cinza' if st!='concluido'}}">{{lb}}</button></form>{% endfor %}
 <a class="btn mini" href="/agendar?cliente={{a.cliente_id}}&servico={{a.servico_id}}">Remarcar</a></div></div>{% endfor %}{% endfor %}{% endblock %}

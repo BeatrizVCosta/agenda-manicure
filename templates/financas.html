@@ -1,12 +1,33 @@
-{% extends "base.html" %}{% block c %}<h2>📊 Finanças</h2>{% include "filtro.html" %}
+{% extends "base.html" %}{% block c %}<h2>Finanças</h2>{% include "filtro.html" %}
+
+<div class="card destaque">
+  <small>Lucro do período</small>
+  <div class="num ouro grande">{{r.lucro|brl}}</div>
+  <small>Recebido menos materiais dos serviços e gastos cadastrados.</small>
+</div>
+
 <div class="grid">
-<div class="card"><small>Recebido ({{r.n}} atend.)</small><div class="num">{{r.rec|brl}}</div></div>
-<div class="card"><small>Gasto total</small><div class="num">{{(r.cus+r.desp)|brl}}</div></div>
-<div class="card"><small>Materiais dos serviços</small><div class="num">{{r.cus|brl}}</div></div>
-<div class="card"><small>Compras avulsas</small><div class="num">{{r.desp|brl}}</div></div></div>
-<div class="card" style="border-color:var(--ouro)"><small>Lucro do período</small><div class="num ouro">{{r.lucro|brl}}</div></div>
-<h2>⭐ Serviços mais feitos</h2>
+  <div class="card"><small>Recebido ({{r.n}} atend.)</small><div class="num">{{r.rec|brl}}</div></div>
+  <div class="card"><small>Gasto total</small><div class="num">{{(r.cus+r.desp)|brl}}</div>
+    <small>Materiais {{r.cus|brl}} · Gastos {{r.desp|brl}}</small></div>
+</div>
+
+<section class="card meta" aria-labelledby="meta-t">
+  <div class="row sp"><b id="meta-t">Meta de salário do mês</b><span class="num">{{meta|brl}}</span></div>
+  <div class="barra grossa" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{progresso|round|int}}" aria-label="Lucro do mês em relação à meta de salário"><i class="{{'ok' if not falta}}" style="width:{{progresso|round(1)}}%"></i></div>
+  <p class="meta-txt">{% if falta %}Faltam <b>{{falta|brl}}</b> de lucro para atingir a meta.{% else %}Meta atingida. Sobram <b>{{acima|brl}}</b> para a reserva da empresa.{% endif %}</p>
+  <small>Lucro deste mês: {{lucro_mes|brl}}. A meta é mensal e não depende do período filtrado acima.</small>
+  <details class="ref"><summary>Ajustar meta de salário</summary>
+    <form method="post" action="/financas/meta">
+      <label for="meta">Nova meta mensal (R$)</label>
+      <input id="meta" name="meta" type="number" min="1" step="0.01" required value="{{'%g'%meta}}">
+      <br><button class="btn">Salvar meta</button>
+    </form>
+  </details>
+</section>
+
+<h2>Serviços mais realizados</h2>
 {% for s in r.rank if s.qtd %}<div class="card"><div class="row sp"><b>{{s.nome}}</b><span>{{s.qtd}}x · {{s.total|brl}}</span></div><div class="barra"><i style="width:{{s.qtd/r.max*100}}%"></i></div></div>{% else %}<div class="zero">Nenhum atendimento concluído no período.</div>{% endfor %}
-<h2>🕊 Sem nenhum pedido</h2>
-<div class="card">{% for s in r.rank if not s.qtd %}<span class="tag">{{s.nome}}</span> {% else %}Todos os serviços foram pedidos!{% endfor %}</div>
-<small>Só contam como receita os atendimentos marcados como “Concluído” na tela inicial.</small>{% endblock %}
+<h2>Serviços sem pedidos</h2>
+<div class="card">{% for s in r.rank if not s.qtd %}<span class="tag">{{s.nome}}</span> {% else %}Todos os serviços tiveram pedidos.{% endfor %}</div>
+<small>Só contam como receita os atendimentos marcados como “Concluído” na tela inicial. Para lançar compras e despesas, use a tela <a href="/gastos">Gastos</a>.</small>{% endblock %}

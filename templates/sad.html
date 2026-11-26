@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% from "_sad.html" import fase, decisao %}{% block c %}
+<h2>Apoio à decisão</h2>
+<div class="card aviso">
+  <b>Fase de interface</b>
+  <p>Estes espaços ainda não calculam nada. Sugestões, otimização e previsão entram depois da validação metodológica. Quando entrarem, cada uma poderá ser aceita, ajustada ou ignorada: a decisão final é sempre da profissional.</p>
+</div>
+
+<div class="passo"><span class="n">1</span>Rotina e descanso</div>
+<section class="card" aria-labelledby="s-rotina">
+  <b id="s-rotina">Semana de trabalho</b>
+  <div class="faixa" role="list">
+    {% for d in dias %}<div role="listitem" class="{{'dom' if loop.last}}"><span>{{d[:3]}}</span><small>{{'Descanso' if loop.last else 'Trabalho'}}</small></div>{% endfor %}
+  </div>
+  <small>A agenda trata só da rotina de trabalho; a vida pessoal fica fora dela. O domingo é sempre dia de descanso.</small>
+</section>
+
+<div class="passo"><span class="n">2</span>Tempos por tipo de trabalho</div>
+<section class="card">{% include "_categorias.html" %}</section>
+
+<div class="passo"><span class="n">3</span>Dia de menor movimento e gravação de conteúdo</div>
+<section class="card painel" aria-labelledby="s-dia">
+  <div class="row sp"><b id="s-dia">Dia sugerido para gravação</b>{{ fase() }}</div>
+  <div class="vazio">Dia a definir</div>
+  <small>Idealmente o dia de menor movimento da semana, nunca o domingo.</small>
+  {{ decisao() }}
+</section>
+
+<div class="passo"><span class="n">4</span>Banco de conteúdos sazonais</div>
+<section class="card painel" aria-labelledby="s-banco">
+  <div class="row sp"><b id="s-banco">Conteúdos para épocas de agenda lotada</b>{{ fase() }}</div>
+  <div class="vazio">Nenhum conteúdo no banco</div>
+  <small>Espaço para guardar conteúdos prontos de datas sazonais, para uso quando a agenda estiver cheia.</small>
+  {{ decisao() }}
+</section>
+
+<div class="passo"><span class="n">5</span>Serviços: manter ou priorizar</div>
+<section class="card painel" aria-labelledby="s-serv">
+  <div class="row sp"><b id="s-serv">Avaliação dos serviços</b>{{ fase() }}</div>
+  <ul class="lista-sad">{% for s in servicos %}<li><span>{{s.nome}}</span><span class="tag neutro">Sem avaliação</span></li>{% endfor %}</ul>
+  {{ decisao() }}
+  <a href="/servicos">Ir para Serviços</a>
+</section>
+
+<div class="passo"><span class="n">6</span>Previsão e sazonalidade</div>
+<section class="card painel" aria-labelledby="s-prev">
+  <div class="row sp"><b id="s-prev">Demanda ao longo do ano</b>{{ fase() }}</div>
+  <div class="grafico-vazio" role="img" aria-label="Gráfico vazio de previsão mensal, sem dados nesta fase">
+    {% for m in ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'] %}<span>{{m}}</span>{% endfor %}
+  </div>
+  <small>Espaço para a previsão de demanda e a sazonalidade. Sem dados nesta fase.</small>
+  {{ decisao() }}
+</section>
+{% endblock %}

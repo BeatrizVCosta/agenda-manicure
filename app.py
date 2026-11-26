@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS servicos(id INTEGER PRIMARY KEY, nome TEXT, preco REA
 CREATE TABLE IF NOT EXISTS clientes(id INTEGER PRIMARY KEY, nome TEXT, contato TEXT UNIQUE);
 CREATE TABLE IF NOT EXISTS agendamentos(id INTEGER PRIMARY KEY, cliente_id INT, servico_id INT, data TEXT, hora TEXT,
   preco REAL, custo REAL, horas REAL, status TEXT DEFAULT 'agendado', obs TEXT);
-CREATE TABLE IF NOT EXISTS despesas(id INTEGER PRIMARY KEY, data TEXT, descricao TEXT, valor REAL);
+CREATE TABLE IF NOT EXISTS despesas(id INTEGER PRIMARY KEY, data TEXT, descricao TEXT, valor REAL, categoria TEXT);
 CREATE TABLE IF NOT EXISTS config(chave TEXT PRIMARY KEY, valor TEXT);
 """
 
@@ -42,7 +42,9 @@ def init_db():
     c.executescript(SCHEMA)
     if not c.execute("SELECT 1 FROM servicos").fetchone():
         c.executemany("INSERT INTO servicos(nome,preco,custo,horas) VALUES(?,?,?,?)", PADRAO)
-    c.execute("INSERT OR IGNORE INTO config VALUES('pct_salario','60')")
+    if "categoria" not in [r[1] for r in c.execute("PRAGMA table_info(despesas)")]:
+        c.execute("ALTER TABLE despesas ADD COLUMN categoria TEXT")  # bancos criados antes desta versão
+    c.execute("INSERT OR IGNORE INTO config VALUES('meta_salario','1800')")
     c.commit(); c.close()
 
 @app.template_filter("brl")
@@ -54,6 +56,10 @@ DIAS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 def dia_br(s):
     d = date.fromisoformat(s)
     return f"{DIAS[d.weekday()]}, {d:%d/%m}"
+
+@app.template_filter("eh_domingo")
+def eh_domingo(s):
+    return date.fromisoformat(s).weekday() == 6
 
 @app.template_filter("fim")
 def fim(a):
@@ -95,13 +101,20 @@ def servico_salvar():
                      (f["nome"], v("preco"), v("custo"), v("horas"), f["id"]))
     else:
         db().execute("INSERT INTO servicos(nome,preco,custo,horas) VALUES(?,?,?,?)", (f["nome"], v("preco"), v("custo"), v("horas")))
-    db().commit(); flash("Serviço salvo ✨")
+    db().commit(); flash("Serviço salvo.")
     return redirect(url_for("servicos"))
 
 @app.post("/servicos/<int:i>/excluir")
 def servico_excluir(i):  # só desativa, para não quebrar o histórico
     db().execute("UPDATE servicos SET ativo=0 WHERE id=?", (i,)); db().commit()
     return redirect(url_for("servicos"))
+
+# ---------- APOIO À DECISÃO (SAD) ----------
+# Fase de interface: sem cálculos, modelos ou base histórica definitiva (aguardando validação metodológica).
+@app.route("/sad")
+def sad():
+    lista = db().execute("SELECT id, nome FROM servicos WHERE ativo=1 ORDER BY nome").fetchall()
+    return render_template("sad.html", servicos=lista, dias=DIAS)
 
 # ---------- AGENDAR ----------
 @app.route("/agendar", methods=["GET", "POST"])
@@ -118,7 +131,7 @@ def agendar():
         s = d.execute("SELECT * FROM servicos WHERE id=?", (f["servico_id"],)).fetchone()
         d.execute("INSERT INTO agendamentos(cliente_id,servico_id,data,hora,preco,custo,horas,obs) VALUES(?,?,?,?,?,?,?,?)",
                   (cid, s["id"], f["data"], f["hora"], s["preco"], s["custo"], s["horas"], f.get("obs")))
-        d.commit(); flash("Agendamento salvo 💖")
+        d.commit(); flash("Agendamento salvo.")
         return redirect(url_for("inicio"))
     clientes = [dict(r) for r in d.execute("SELECT * FROM clientes ORDER BY nome")]
     pre = d.execute("SELECT * FROM clientes WHERE id=?", (request.args.get("cliente"),)).fetchone()
@@ -144,35 +157,73 @@ def resumo(ini, fim_):
     r = d.execute("SELECT COALESCE(SUM(preco),0) rec, COALESCE(SUM(custo),0) cus, COUNT(*) n FROM agendamentos WHERE status='concluido' AND data BETWEEN ? AND ?", (ini, fim_)).fetchone()
     desp = d.execute("SELECT COALESCE(SUM(valor),0) FROM despesas WHERE data BETWEEN ? AND ?", (ini, fim_)).fetchone()[0]
     lucro = r["rec"] - r["cus"] - desp
-    pct = float(d.execute("SELECT valor FROM config WHERE chave='pct_salario'").fetchone()[0])
-    sal = max(lucro, 0) * pct / 100
     rank = d.execute("""SELECT s.nome, COUNT(a.id) qtd, COALESCE(SUM(a.preco),0) total FROM servicos s
         LEFT JOIN agendamentos a ON a.servico_id=s.id AND a.status='concluido' AND a.data BETWEEN ? AND ?
         WHERE s.ativo=1 GROUP BY s.id ORDER BY qtd DESC, s.nome""", (ini, fim_)).fetchall()
-    return dict(rec=r["rec"], cus=r["cus"], n=r["n"], desp=desp, lucro=lucro, pct=pct, sal=sal,
-                reserva=lucro - sal if lucro > 0 else 0, rank=rank, max=max([x["qtd"] for x in rank] + [1]))
+    return dict(rec=r["rec"], cus=r["cus"], n=r["n"], desp=desp, lucro=lucro,
+                rank=rank, max=max([x["qtd"] for x in rank] + [1]))
+
+def meta_salario():
+    row = db().execute("SELECT valor FROM config WHERE chave='meta_salario'").fetchone()
+    try: return float(row[0])
+    except Exception: return 1800.0
 
 @app.route("/financas")
 def financas():
     p, ini, fim_ = periodo()
-    return render_template("financas.html", p=p, ini=ini, fim=fim_, r=resumo(ini, fim_))
+    h = date.today()
+    mini = h.replace(day=1)
+    mfim = (mini.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    lucro_mes = resumo(mini.isoformat(), mfim.isoformat())["lucro"]
+    meta = meta_salario()
+    return render_template("financas.html", p=p, ini=ini, fim=fim_, r=resumo(ini, fim_), meta=meta,
+                           lucro_mes=lucro_mes, falta=max(meta - lucro_mes, 0), acima=max(lucro_mes - meta, 0),
+                           progresso=min(max(lucro_mes, 0) / meta * 100, 100) if meta > 0 else 0)
 
-@app.route("/caixa", methods=["GET", "POST"])
-def caixa():
+@app.post("/financas/meta")
+def meta_salvar():
+    try:
+        v = float((request.form.get("meta") or "").replace(",", "."))
+        if v <= 0: raise ValueError
+    except ValueError:
+        flash("Informe um valor de meta maior que zero.")
+        return redirect(url_for("financas"))
+    db().execute("INSERT INTO config(chave,valor) VALUES('meta_salario',?) ON CONFLICT(chave) DO UPDATE SET valor=excluded.valor", (str(v),))
+    db().commit(); flash("Meta de salário atualizada.")
+    return redirect(url_for("financas"))
+
+@app.route("/caixa")
+def caixa():  # tela unificada com Finanças; mantém links antigos funcionando
+    return redirect(url_for("financas"))
+
+# ---------- GASTOS ----------
+CATEGORIAS = ["Estoque de produtos", "Energia", "Água", "Café e lanche", "Outros"]
+
+@app.route("/gastos", methods=["GET", "POST"])
+def gastos():
     d = db()
     if request.method == "POST":
         f = request.form
-        if f["acao"] == "pct":
-            d.execute("UPDATE config SET valor=? WHERE chave='pct_salario'", (min(max(float(f["pct"]), 0), 100),))
-        elif f["acao"] == "despesa":
-            d.execute("INSERT INTO despesas(data,descricao,valor) VALUES(?,?,?)", (f["data"], f["descricao"], float(f["valor"].replace(",", "."))))
-        elif f["acao"] == "apagar":
-            d.execute("DELETE FROM despesas WHERE id=?", (f["id"],))
-        d.commit(); flash("Salvo ✨")
-        return redirect(request.referrer or url_for("caixa"))
+        if f.get("acao") == "apagar":
+            d.execute("DELETE FROM despesas WHERE id=?", (f["id"],)); d.commit(); flash("Gasto removido.")
+        else:
+            try:
+                valor = float((f.get("valor") or "").replace(",", "."))
+                if valor <= 0: raise ValueError
+            except ValueError:
+                flash("Informe um valor maior que zero.")
+                return redirect(url_for("gastos"))
+            cat = f.get("categoria") if f.get("categoria") in CATEGORIAS else "Outros"
+            d.execute("INSERT INTO despesas(data,descricao,valor,categoria) VALUES(?,?,?,?)",
+                      (f["data"], (f.get("descricao") or "").strip(), valor, cat))
+            d.commit(); flash("Gasto adicionado.")
+        return redirect(request.referrer or url_for("gastos"))
     p, ini, fim_ = periodo()
-    desp = d.execute("SELECT * FROM despesas WHERE data BETWEEN ? AND ? ORDER BY data DESC", (ini, fim_)).fetchall()
-    return render_template("caixa.html", p=p, ini=ini, fim=fim_, r=resumo(ini, fim_), desp=desp, hoje=date.today().isoformat())
+    lista = d.execute("SELECT *, COALESCE(categoria,'Outros') cat FROM despesas WHERE data BETWEEN ? AND ? ORDER BY data DESC, id DESC", (ini, fim_)).fetchall()
+    tot = sum(x["valor"] for x in lista)
+    estoque = sum(x["valor"] for x in lista if x["cat"] == "Estoque de produtos")
+    return render_template("gastos.html", p=p, ini=ini, fim=fim_, lista=lista, total=tot, estoque=estoque,
+                           diversos=tot - estoque, categorias=CATEGORIAS, hoje=date.today().isoformat())
 
 init_db()
 if __name__ == "__main__":

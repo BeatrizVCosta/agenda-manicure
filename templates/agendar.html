@@ -1,13 +1,36 @@
-{% extends "base.html" %}{% block c %}<h2>📅 Novo agendamento</h2>
+{% extends "base.html" %}{% from "_sad.html" import fase, decisao %}{% block c %}<h2>Novo agendamento</h2>
 <form class="card" method="post">
-<label>Data</label><input type="date" name="data" value="{{hoje}}" required>
-<label>Horário</label><input type="time" name="hora" required>
-<label>Nome da cliente</label><input name="nome" id="nome" list="cl" required autocomplete="off" value="{{pre.nome if pre}}">
+
+<div class="passo"><span class="n">1</span>Data e horário</div>
+<label for="data">Data</label><input type="date" id="data" name="data" value="{{hoje}}" required>
+<small id="aviso-domingo" class="aviso-dom" role="status" hidden>Domingo é dia de descanso. Você pode seguir com o agendamento se decidir assim.</small>
+<label for="hora">Horário</label><input type="time" id="hora" name="hora" required>
+
+<div class="passo"><span class="n">2</span>Cliente</div>
+<label for="nome">Nome da cliente</label><input name="nome" id="nome" list="cl" required autocomplete="off" value="{{pre.nome if pre}}">
 <datalist id="cl">{% for c in clientes %}<option value="{{c.nome}}">{% endfor %}</datalist>
-<label>Contato (WhatsApp)</label><input name="contato" id="contato" type="tel" required value="{{pre.contato if pre}}">
-<label>Procedimento</label><select name="servico_id" required>{% for s in servicos %}<option value="{{s.id}}" {{'selected' if s.id==pre_serv}}>{{s.nome}} — {{s.preco|brl}} ({{s.horas}}h)</option>{% endfor %}</select>
-<label>Observações</label><textarea name="obs" rows="2"></textarea><br>
-<button class="btn grande">Salvar agendamento</button>
-<small>Clientes novas ficam salvas automaticamente; nas próximas, digite o nome e o contato é preenchido.</small></form>
-<script>const C={{cj|safe}};document.getElementById('nome').addEventListener('input',e=>{const c=C.find(x=>x.nome===e.target.value);if(c)document.getElementById('contato').value=c.contato})</script>
+<label for="contato">Contato (WhatsApp)</label><input name="contato" id="contato" type="tel" required value="{{pre.contato if pre}}">
+
+<div class="passo"><span class="n">3</span>Procedimento</div>
+<label for="servico_id">Procedimento</label><select name="servico_id" id="servico_id" required>{% for s in servicos %}<option value="{{s.id}}" {{'selected' if s.id==pre_serv}}>{{s.nome}} — {{s.preco|brl}} ({{s.horas}}h)</option>{% endfor %}</select>
+<details class="ref"><summary>Referência de tempos por tipo de trabalho</summary>{% include "_categorias.html" %}</details>
+
+<div class="passo"><span class="n">4</span>Observações</div>
+<label for="obs">Observações</label><textarea name="obs" id="obs" rows="2"></textarea>
+
+<div class="passo"><span class="n">5</span>Conferência e decisão</div>
+<div class="painel-vazio">
+  <div class="row sp"><b>Sugestão de encaixe</b>{{ fase() }}</div>
+  <div class="vazio">Sem sugestão nesta fase</div>
+  {{ decisao() }}
+</div>
+<br><button class="btn grande">Salvar agendamento</button>
+<small>Novas clientes ficam salvas automaticamente. Em um próximo agendamento, digite o nome para preencher o contato.</small></form>
+<script>
+const C={{cj|safe}};
+document.getElementById('nome').addEventListener('input',e=>{const c=C.find(x=>x.nome===e.target.value);if(c)document.getElementById('contato').value=c.contato});
+const dt=document.getElementById('data'),av=document.getElementById('aviso-domingo');
+function chk(){const v=dt.value;av.hidden=!(v&&new Date(v+'T12:00:00').getDay()===0)}
+dt.addEventListener('input',chk);chk();
+</script>
 {% endblock %}

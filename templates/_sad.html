@@ -1,0 +1,11 @@
+{# Componentes visuais do apoio à decisão (SAD). Nesta fase não há cálculo: tudo é espaço reservado. #}
+{% macro fase() %}<span class="tag fase">Em validação</span>{% endmacro %}
+
+{% macro decisao() %}
+<div class="decisao" role="group" aria-label="Decisão da profissional">
+  <button type="button" class="btn mini" disabled>Aceitar</button>
+  <button type="button" class="btn mini cinza" disabled>Ajustar</button>
+  <button type="button" class="btn mini cinza" disabled>Ignorar</button>
+  <small>Liberadas quando houver uma sugestão para avaliar. A decisão final é sua.</small>
+</div>
+{% endmacro %}
